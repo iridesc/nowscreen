@@ -224,20 +224,20 @@ body {
 /* 主题选择器 */
 .theme-selector {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
 }
 .theme-card {
   border: 2px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
-  padding: 12px 8px;
+  padding: 8px 4px;
   cursor: pointer;
   text-align: center;
   transition: border-color 0.25s, background 0.25s, transform 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 .theme-card:hover {
   border-color: rgba(255, 255, 255, 0.4);
@@ -278,6 +278,32 @@ body {
   padding: 2px;
 }
 
+/* 面板底部信息栏 */
+.panel-footer {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #666;
+}
+.panel-footer .version {
+  color: #555;
+}
+.panel-footer .github-link {
+  color: #777;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+}
+.panel-footer .github-link:hover {
+  color: #bbb;
+}
+
 /* 范围值显示 */
 .range-value {
   font-size: 12px;
@@ -312,8 +338,36 @@ body {
         <span class="theme-name">极简白</span>
       </div>
       <div class="theme-card" data-theme="retro">
-        <div class="theme-preview" style="background:#0d0d05;color:#ffb000;font-family:monospace;">12:30:00</div>
+        <div class="theme-preview" style="background:#0d0d05;color:#ffb000;font-family:monospace;">12:30</div>
         <span class="theme-name">复古琥珀</span>
+      </div>
+      <div class="theme-card" data-theme="forest">
+        <div class="theme-preview" style="background:#0a1f0a;color:#7ec87e;font-family:serif;">12:30</div>
+        <span class="theme-name">森林绿</span>
+      </div>
+      <div class="theme-card" data-theme="ocean">
+        <div class="theme-preview" style="background:#0a1628;color:#5b9bd5;font-family:system-ui;">12:30</div>
+        <span class="theme-name">海洋蓝</span>
+      </div>
+      <div class="theme-card" data-theme="neon">
+        <div class="theme-preview" style="background:#0f0014;color:#e040ff;font-family:monospace;">12:30</div>
+        <span class="theme-name">霓虹紫</span>
+      </div>
+      <div class="theme-card" data-theme="sunset">
+        <div class="theme-preview" style="background:#1a0d05;color:#ff8c42;font-family:sans-serif;">12:30</div>
+        <span class="theme-name">日落橙</span>
+      </div>
+      <div class="theme-card" data-theme="mint">
+        <div class="theme-preview" style="background:#ebf5ee;color:#2d6a4f;font-family:system-ui;">12:30</div>
+        <span class="theme-name">薄荷绿</span>
+      </div>
+      <div class="theme-card" data-theme="rose">
+        <div class="theme-preview" style="background:#1a0a14;color:#ff6b9d;font-family:serif;">12:30</div>
+        <span class="theme-name">玫瑰粉</span>
+      </div>
+      <div class="theme-card" data-theme="aurora">
+        <div class="theme-preview" style="background:#050a14;color:#00e5a0;font-family:monospace;">12:30</div>
+        <span class="theme-name">极光</span>
       </div>
     </div>
   </div>
@@ -383,6 +437,15 @@ body {
       </label>
     </div>
   </div>
+
+  <!-- 底部信息 -->
+  <div class="panel-footer">
+    <span class="version">v1.1.0</span>
+    <a class="github-link" href="https://github.com/iridesc/nowscreen" target="_blank" rel="noopener">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      GitHub
+    </a>
+  </div>
 </div>
 
 <script>
@@ -423,6 +486,55 @@ const THEMES = {
     name: '复古琥珀',
     bgColor: '#0d0d05',
     textColor: '#ffb000',
+    fontFamily: 'monospace',
+    fontSize: 18,
+  },
+  forest: {
+    name: '森林绿',
+    bgColor: '#0a1f0a',
+    textColor: '#7ec87e',
+    fontFamily: 'serif',
+    fontSize: 16,
+  },
+  ocean: {
+    name: '海洋蓝',
+    bgColor: '#0a1628',
+    textColor: '#5b9bd5',
+    fontFamily: 'system-ui',
+    fontSize: 16,
+  },
+  neon: {
+    name: '霓虹紫',
+    bgColor: '#0f0014',
+    textColor: '#e040ff',
+    fontFamily: 'monospace',
+    fontSize: 18,
+  },
+  sunset: {
+    name: '日落橙',
+    bgColor: '#1a0d05',
+    textColor: '#ff8c42',
+    fontFamily: 'sans-serif',
+    fontSize: 17,
+  },
+  mint: {
+    name: '薄荷绿',
+    bgColor: '#ebf5ee',
+    textColor: '#2d6a4f',
+    fontFamily: 'system-ui',
+    fontSize: 16,
+  },
+  rose: {
+    name: '玫瑰粉',
+    bgColor: '#1a0a14',
+    textColor: '#ff6b9d',
+    fontFamily: 'serif',
+    fontSize: 16,
+  },
+  aurora: {
+    name: '极光',
+    bgColor: '#050a14',
+    textColor: '#00e5a0',
     fontFamily: 'monospace',
     fontSize: 18,
   },
