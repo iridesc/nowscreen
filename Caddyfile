@@ -1,0 +1,24 @@
+# 屏幕保护时钟 - Caddy 配置
+# 启动: caddy run   或   caddy file-server
+
+# ===== 场景 1: 本地开发（最常用）=====
+# 直接在当前目录启动，访问 http://localhost:8080
+:8080 {
+  root * .
+  file_server
+}
+
+# ===== 场景 2: 带域名 + 自动 HTTPS =====
+# 将 example.com 替换为你的域名，Caddy 自动申请和管理 TLS 证书
+# clock.yourdomain.com {
+#   root * /var/www/nowscreen
+#   file_server
+#   encode gzip
+# }
+
+# ===== 场景 3: 本地 HTTPS 测试 =====
+# https://localhost:8443 {
+#   root * .
+#   file_server
+#   tls internal
+# }

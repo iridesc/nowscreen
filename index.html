@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>屏幕保护时钟</title>
+<style>
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  background-color: #000000;
+  color: #ffffff;
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+#clock {
+  font-size: 16vw;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  font-variant-numeric: tabular-nums;
+  position: absolute;
+  white-space: nowrap;
+  transition: font-family 0.3s ease, color 0.3s ease, left 0.8s ease, top 0.8s ease;
+}
+
+/* ===== 设置图标 ===== */
+#settings-icon {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  font-size: 36px;
+  cursor: pointer;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.3s ease;
+  z-index: 100;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#settings-icon:hover {
+  background: rgba(255, 255, 255, 0.18);
+  transform: rotate(60deg);
+}
+#settings-icon.visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+/* ===== 设置面板 ===== */
+#settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 340px;
+  max-width: 90vw;
+  height: 100vh;
+  background: rgba(30, 30, 30, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
+  z-index: 200;
+  transform: translateX(100%);
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 28px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  color: #e0e0e0;
+}
+#settings-panel.open {
+  transform: translateX(0);
+}
+
+#settings-panel h2 {
+  font-size: 20px;
+  font-weight: 500;
+  color: #fff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#settings-panel .close-btn {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 4px 8px;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+#settings-panel .close-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 设置项 */
+.setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.setting-group label {
+  font-size: 13px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.setting-group input[type="range"] {
+  width: 100%;
+  accent-color: #fff;
+  cursor: pointer;
+}
+.setting-group input[type="color"] {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+}
+.setting-group select {
+  width: 100%;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e0e0e0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+}
+.setting-group select option {
+  background: #2a2a2a;
+  color: #e0e0e0;
+}
+
+/* 开关/toggle */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.toggle-row label {
+  font-size: 13px;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.toggle-switch {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  flex-shrink: 0;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.toggle-switch .slider {
+  position: absolute;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 28px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+.toggle-switch .slider::before {
+  content: '';
+  position: absolute;
+  width: 22px;
+  height: 22px;
+  left: 3px;
+  bottom: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.3s;
+}
+.toggle-switch input:checked + .slider {
+  background: #4caf50;
+}
+.toggle-switch input:checked + .slider::before {
+  transform: translateX(20px);
+}
+
+/* 主题选择器 */
+.theme-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.theme-card {
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 8px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.25s, background 0.25s, transform 0.2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+.theme-card:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+}
+.theme-card.active {
+  border-color: #4caf50;
+  background: rgba(76, 175, 80, 0.12);
+}
+.theme-card .theme-preview {
+  width: 100%;
+  height: 36px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.theme-card .theme-name {
+  font-size: 11px;
+  color: #aaa;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* 文字颜色选择器 */
+.setting-group input[type="color"].text-color-picker {
+  width: 100%;
+  height: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  padding: 2px;
+}
+
+/* 范围值显示 */
+.range-value {
+  font-size: 12px;
+  color: #999;
+  text-align: right;
+}
+</style>
+</head>
+<body>
+<div id="clock">00:00:00</div>
+
+<!-- 设置图标 -->
+<div id="settings-icon" title="设置">⚙</div>
+
+<!-- 设置面板 -->
+<div id="settings-panel">
+  <h2>
+    设置
+    <button class="close-btn" id="panel-close">&times;</button>
+  </h2>
+
+  <!-- 主题选择 -->
+  <div class="setting-group">
+    <label>主题</label>
+    <div class="theme-selector" id="theme-selector">
+      <div class="theme-card active" data-theme="dark">
+        <div class="theme-preview" style="background:#000;color:#fff;font-family:system-ui;">12:30:00</div>
+        <span class="theme-name">暗夜模式</span>
+      </div>
+      <div class="theme-card" data-theme="light">
+        <div class="theme-preview" style="background:#f0f0f0;color:#1a1a1a;font-family:sans-serif;">12:30:00</div>
+        <span class="theme-name">极简白</span>
+      </div>
+      <div class="theme-card" data-theme="retro">
+        <div class="theme-preview" style="background:#0d0d05;color:#ffb000;font-family:monospace;">12:30:00</div>
+        <span class="theme-name">复古琥珀</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <label>字体大小 <span class="range-value" id="font-size-val">16vw</span></label>
+    <input type="range" id="font-size-slider" min="4" max="30" value="16" step="1">
+  </div>
+
+  <div class="setting-group">
+    <label>背景颜色</label>
+    <input type="color" id="bg-color-picker" value="#000000">
+  </div>
+
+  <div class="setting-group">
+    <label>文字颜色</label>
+    <input type="color" id="text-color-picker" value="#ffffff" class="text-color-picker">
+  </div>
+
+  <div class="setting-group">
+    <label>字体</label>
+    <select id="font-select">
+      <option value="system-ui">系统默认</option>
+      <option value="monospace">等宽字体</option>
+      <option value="serif">衬线字体</option>
+      <option value="sans-serif">无衬线字体</option>
+    </select>
+  </div>
+
+  <div class="setting-group">
+    <label>时区</label>
+    <select id="timezone-select">
+      <option value="local">本地时间</option>
+      <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
+      <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+      <option value="Asia/Seoul">Asia/Seoul (UTC+9)</option>
+      <option value="Asia/Singapore">Asia/Singapore (UTC+8)</option>
+      <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
+      <option value="Europe/London">Europe/London (UTC+0/1)</option>
+      <option value="Europe/Paris">Europe/Paris (UTC+1/2)</option>
+      <option value="Europe/Moscow">Europe/Moscow (UTC+3)</option>
+      <option value="America/New_York">America/New_York (UTC-5/4)</option>
+      <option value="America/Chicago">America/Chicago (UTC-6/5)</option>
+      <option value="America/Denver">America/Denver (UTC-7/6)</option>
+      <option value="America/Los_Angeles">America/Los_Angeles (UTC-8/7)</option>
+      <option value="Pacific/Auckland">Pacific/Auckland (UTC+12/13)</option>
+      <option value="Australia/Sydney">Australia/Sydney (UTC+10/11)</option>
+    </select>
+  </div>
+
+  <div class="setting-group">
+    <div class="toggle-row">
+      <label>24 小时制</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="hour-format-toggle" checked>
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <div class="setting-group">
+    <div class="toggle-row">
+      <label>启用屏幕保护</label>
+      <label class="toggle-switch">
+        <input type="checkbox" id="screensaver-toggle">
+        <span class="slider"></span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== DOM 引用 =====
+const clockEl = document.getElementById('clock');
+const settingsIcon = document.getElementById('settings-icon');
+const settingsPanel = document.getElementById('settings-panel');
+const panelClose = document.getElementById('panel-close');
+
+// 控件
+const fontSizeSlider = document.getElementById('font-size-slider');
+const fontSizeVal = document.getElementById('font-size-val');
+const bgColorPicker = document.getElementById('bg-color-picker');
+const textColorPicker = document.getElementById('text-color-picker');
+const fontSelect = document.getElementById('font-select');
+const timezoneSelect = document.getElementById('timezone-select');
+const hourFormatToggle = document.getElementById('hour-format-toggle');
+const screensaverToggle = document.getElementById('screensaver-toggle');
+const themeCards = document.querySelectorAll('.theme-card');
+
+// ===== 主题定义 =====
+const THEMES = {
+  dark: {
+    name: '暗夜模式',
+    bgColor: '#000000',
+    textColor: '#ffffff',
+    fontFamily: 'system-ui',
+    fontSize: 16,
+  },
+  light: {
+    name: '极简白',
+    bgColor: '#f0f0f0',
+    textColor: '#1a1a1a',
+    fontFamily: 'sans-serif',
+    fontSize: 16,
+  },
+  retro: {
+    name: '复古琥珀',
+    bgColor: '#0d0d05',
+    textColor: '#ffb000',
+    fontFamily: 'monospace',
+    fontSize: 18,
+  },
+};
+
+// ===== 默认设置 =====
+const DEFAULT_SETTINGS = {
+  theme: 'dark',
+  fontSize: 16,
+  bgColor: '#000000',
+  textColor: '#ffffff',
+  fontFamily: 'system-ui',
+  timezone: 'local',
+  hourFormat: '24',
+  screensaverEnabled: false,
+  screensaverSpeed: 0.8,
+};
+
+let settings = { ...DEFAULT_SETTINGS };
+let settingsVisible = false;
+let hideIconTimer = null;
+let iconVisible = false;
+
+// ===== 屏幕保护状态 =====
+let ssAnimationId = null;
+let ssPosX = 0;
+let ssPosY = 0;
+let ssVx = 0.6;
+let ssVy = 0.4;
+let ssPaused = false;
+let ssResumeTimer = null;
+
+// ===== 设置持久化 =====
+function saveSettings() {
+  localStorage.setItem('clock-settings', JSON.stringify(settings));
+}
+
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem('clock-settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      settings = { ...DEFAULT_SETTINGS, ...parsed };
+    }
+  } catch (e) {
+    settings = { ...DEFAULT_SETTINGS };
+  }
+}
+
+function applySettings() {
+  document.body.style.backgroundColor = settings.bgColor;
+  clockEl.style.color = settings.textColor;
+  clockEl.style.fontSize = settings.fontSize + 'vw';
+  clockEl.style.fontFamily = settings.fontFamily;
+  saveSettings();
+}
+
+// ===== 时钟更新（支持时区） =====
+function updateClock() {
+  let now;
+  if (settings.timezone !== 'local') {
+    try {
+      const localStr = new Date().toLocaleString('en-US', { timeZone: settings.timezone });
+      now = new Date(localStr);
+    } catch (e) {
+      now = new Date();
+    }
+  } else {
+    now = new Date();
+  }
+
+  let hours = now.getHours();
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  const seconds = String(now.getSeconds()).padStart(2, '0');
+
+  if (settings.hourFormat === '12') {
+    hours = hours % 12 || 12;
+  }
+
+  hours = String(hours).padStart(2, '0');
+  clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+}
+
+// ===== 同步控件状态 =====
+function syncControlsToSettings() {
+  fontSizeSlider.value = settings.fontSize;
+  fontSizeVal.textContent = settings.fontSize + 'vw';
+  bgColorPicker.value = settings.bgColor;
+  textColorPicker.value = settings.textColor;
+  fontSelect.value = settings.fontFamily;
+  timezoneSelect.value = settings.timezone;
+  hourFormatToggle.checked = settings.hourFormat === '24';
+  screensaverToggle.checked = settings.screensaverEnabled;
+  syncThemeCards();
+}
+
+function syncThemeCards() {
+  themeCards.forEach(card => {
+    const themeKey = card.dataset.theme;
+    if (themeKey === settings.theme) {
+      card.classList.add('active');
+    } else {
+      card.classList.remove('active');
+    }
+  });
+}
+
+// ===== 设置图标显示/隐藏 =====
+function showSettingsIcon() {
+  if (settingsPanel.classList.contains('open')) return;
+  settingsIcon.classList.add('visible');
+  iconVisible = true;
+  resetHideTimer();
+}
+
+function hideSettingsIcon() {
+  settingsIcon.classList.remove('visible');
+  iconVisible = false;
+  clearTimeout(hideIconTimer);
+  hideIconTimer = null;
+}
+
+function resetHideTimer() {
+  clearTimeout(hideIconTimer);
+  hideIconTimer = setTimeout(() => {
+    if (!settingsPanel.classList.contains('open')) {
+      hideSettingsIcon();
+    }
+  }, 5000);
+}
+
+// ===== 设置面板打开/关闭 =====
+function openPanel() {
+  settingsPanel.classList.add('open');
+  hideSettingsIcon();
+}
+
+function closePanel() {
+  settingsPanel.classList.remove('open');
+  // 关闭面板后不立即显示图标
+}
+
+// ===== 屏幕保护 =====
+function startScreensaver() {
+  if (ssAnimationId) return;
+
+  // 初始化位置为时钟当前位置
+  const rect = clockEl.getBoundingClientRect();
+  ssPosX = rect.left;
+  ssPosY = rect.top;
+
+  // 随机初始方向
+  const angle = Math.random() * Math.PI * 2;
+  const baseSpeed = settings.screensaverSpeed;
+  ssVx = Math.cos(angle) * baseSpeed;
+  ssVy = Math.sin(angle) * baseSpeed;
+
+  // 确保最小速度
+  if (Math.abs(ssVx) < 0.3) ssVx = (ssVx >= 0 ? 1 : -1) * 0.3;
+  if (Math.abs(ssVy) < 0.3) ssVy = (ssVy >= 0 ? 1 : -1) * 0.3;
+
+  // 移除居中样式，切换为绝对定位
+  clockEl.style.left = ssPosX + 'px';
+  clockEl.style.top = ssPosY + 'px';
+
+  function animate() {
+    if (ssPaused) {
+      ssAnimationId = requestAnimationFrame(animate);
+      return;
+    }
+
+    const cw = clockEl.offsetWidth;
+    const ch = clockEl.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    ssPosX += ssVx;
+    ssPosY += ssVy;
+
+    // 边界反弹
+    if (ssPosX <= 0) {
+      ssPosX = 0;
+      ssVx = Math.abs(ssVx);
+    } else if (ssPosX + cw >= vw) {
+      ssPosX = vw - cw;
+      ssVx = -Math.abs(ssVx);
+    }
+
+    if (ssPosY <= 0) {
+      ssPosY = 0;
+      ssVy = Math.abs(ssVy);
+    } else if (ssPosY + ch >= vh) {
+      ssPosY = vh - ch;
+      ssVy = -Math.abs(ssVy);
+    }
+
+    clockEl.style.left = ssPosX + 'px';
+    clockEl.style.top = ssPosY + 'px';
+
+    ssAnimationId = requestAnimationFrame(animate);
+  }
+
+  ssAnimationId = requestAnimationFrame(animate);
+}
+
+function stopScreensaver() {
+  if (ssAnimationId) {
+    cancelAnimationFrame(ssAnimationId);
+    ssAnimationId = null;
+  }
+
+  // 回到屏幕中央
+  clockEl.style.left = '50%';
+  clockEl.style.top = '50%';
+  clockEl.style.transform = 'translate(-50%, -50%)';
+}
+
+function resetScreensaverPosition() {
+  // 如果屏幕保护关闭，让时钟回到中央
+  if (!settings.screensaverEnabled) {
+    clockEl.style.left = '';
+    clockEl.style.top = '';
+    clockEl.style.transform = '';
+  }
+}
+
+function toggleScreensaver(enabled) {
+  settings.screensaverEnabled = enabled;
+  saveSettings();
+
+  if (enabled) {
+    // 先移除居中 transform，设置 left/top
+    const rect = clockEl.getBoundingClientRect();
+    clockEl.style.transform = 'none';
+    clockEl.style.left = rect.left + 'px';
+    clockEl.style.top = rect.top + 'px';
+    startScreensaver();
+  } else {
+    stopScreensaver();
+    clockEl.style.left = '';
+    clockEl.style.top = '';
+    clockEl.style.transform = '';
+  }
+}
+
+function pauseScreensaver() {
+  ssPaused = true;
+}
+
+function resumeScreensaver() {
+  ssPaused = false;
+  clearTimeout(ssResumeTimer);
+  ssResumeTimer = setTimeout(() => {
+    if (settings.screensaverEnabled && !settingsPanel.classList.contains('open')) {
+      resumeScreensaverDirect();
+    }
+  }, 5000);
+}
+
+function resumeScreensaverDirect() {
+  ssPaused = false;
+}
+
+// ===== 事件处理 =====
+
+// 点击页面空白区域
+document.body.addEventListener('click', (e) => {
+  const target = e.target;
+
+  // 点击设置图标 → 打开面板
+  if (target === settingsIcon || settingsIcon.contains(target)) {
+    openPanel();
+    return;
+  }
+
+  // 点击面板内部 → 不处理
+  if (settingsPanel.contains(target)) {
+    return;
+  }
+
+  // 点击面板外部且面板打开 → 关闭面板
+  if (settingsPanel.classList.contains('open')) {
+    closePanel();
+    return;
+  }
+
+  // 点击空白区域 → 显示设置图标
+  showSettingsIcon();
+
+  // 屏幕保护暂停
+  if (settings.screensaverEnabled) {
+    pauseScreensaver();
+    resumeScreensaver();
+  }
+});
+
+// 面板关闭按钮
+panelClose.addEventListener('click', () => {
+  closePanel();
+});
+
+// 防止面板上点击冒泡
+settingsPanel.addEventListener('click', (e) => {
+  e.stopPropagation();
+});
+
+// 键盘 ESC 关闭面板
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsPanel.classList.contains('open')) {
+    closePanel();
+  }
+});
+
+// 鼠标移动 → 重置隐藏计时器
+document.addEventListener('mousemove', () => {
+  if (iconVisible) {
+    resetHideTimer();
+  }
+});
+
+// 触摸事件 → 重置隐藏计时器
+document.addEventListener('touchstart', () => {
+  if (iconVisible) {
+    resetHideTimer();
+  }
+});
+
+// ===== 主题操作 =====
+function applyTheme(themeKey) {
+  const theme = THEMES[themeKey];
+  if (!theme) return;
+
+  settings.theme = themeKey;
+  settings.bgColor = theme.bgColor;
+  settings.textColor = theme.textColor;
+  settings.fontFamily = theme.fontFamily;
+  settings.fontSize = theme.fontSize;
+
+  applySettings();
+  syncControlsToSettings();
+}
+
+function markCustom() {
+  if (settings.theme === 'custom') return;
+  settings.theme = 'custom';
+  syncThemeCards();
+}
+
+// ===== 控件绑定 =====
+
+// 主题卡片点击
+themeCards.forEach(card => {
+  card.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const themeKey = card.dataset.theme;
+    if (themeKey) applyTheme(themeKey);
+  });
+});
+
+// 字体大小滑块
+fontSizeSlider.addEventListener('input', () => {
+  settings.fontSize = parseInt(fontSizeSlider.value);
+  fontSizeVal.textContent = settings.fontSize + 'vw';
+  clockEl.style.fontSize = settings.fontSize + 'vw';
+  markCustom();
+  saveSettings();
+});
+
+// 背景颜色
+bgColorPicker.addEventListener('input', () => {
+  settings.bgColor = bgColorPicker.value;
+  document.body.style.backgroundColor = settings.bgColor;
+  markCustom();
+  saveSettings();
+});
+
+// 文字颜色
+textColorPicker.addEventListener('input', () => {
+  settings.textColor = textColorPicker.value;
+  clockEl.style.color = settings.textColor;
+  markCustom();
+  saveSettings();
+});
+
+// 字体选择
+fontSelect.addEventListener('change', () => {
+  settings.fontFamily = fontSelect.value;
+  clockEl.style.fontFamily = settings.fontFamily;
+  markCustom();
+  saveSettings();
+});
+
+// 时区选择
+timezoneSelect.addEventListener('change', () => {
+  settings.timezone = timezoneSelect.value;
+  saveSettings();
+  updateClock();
+});
+
+// 24小时制切换
+hourFormatToggle.addEventListener('change', () => {
+  settings.hourFormat = hourFormatToggle.checked ? '24' : '12';
+  saveSettings();
+  updateClock();
+});
+
+// 屏幕保护开关
+screensaverToggle.addEventListener('change', () => {
+  toggleScreensaver(screensaverToggle.checked);
+});
+
+// 窗口大小变化时更新时钟占位
+window.addEventListener('resize', () => {
+  if (settings.screensaverEnabled && !ssPaused) {
+    // 确保时钟仍在视口内
+    const cw = clockEl.offsetWidth;
+    const ch = clockEl.offsetHeight;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    if (ssPosX + cw > vw) ssPosX = Math.max(0, vw - cw);
+    if (ssPosY + ch > vh) ssPosY = Math.max(0, vh - ch);
+    clockEl.style.left = ssPosX + 'px';
+    clockEl.style.top = ssPosY + 'px';
+  }
+});
+
+// ===== 初始化 =====
+loadSettings();
+applySettings();
+syncControlsToSettings();
+updateClock();
+setInterval(updateClock, 1000);
+
+// 如果上次保存时屏幕保护开启，恢复
+if (settings.screensaverEnabled) {
+  const rect = clockEl.getBoundingClientRect();
+  ssPosX = rect.left;
+  ssPosY = rect.top;
+  clockEl.style.transform = 'none';
+  clockEl.style.left = ssPosX + 'px';
+  clockEl.style.top = ssPosY + 'px';
+  startScreensaver();
+}
+</script>
+</body>
+</html>

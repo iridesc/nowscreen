@@ -1,0 +1,14 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Editor
+.vscode/
+.idea/
+
+# Claude
+.claude/
+
+# OpenSpec (planning artifacts, not code)
+openspec/
