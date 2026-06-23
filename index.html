@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>屏幕保护时钟</title>
+
+<!-- PWA Meta -->
+<meta name="theme-color" content="#000000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="时钟">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' rx='32' fill='%23000'/%3E%3Ctext x='96' y='118' text-anchor='middle' font-family='system-ui,sans-serif' font-size='100' font-weight='300' fill='%23fff'%3E🕐%3C/text%3E%3C/svg%3E">
+<link rel="manifest" id="manifest-link">
 <style>
 *, *::before, *::after {
   margin: 0;
@@ -755,6 +763,7 @@ function applyTheme(themeKey) {
 
   applySettings();
   syncControlsToSettings();
+  updateThemeColor(theme.bgColor);
 }
 
 function markCustom() {
@@ -787,6 +796,7 @@ fontSizeSlider.addEventListener('input', () => {
 bgColorPicker.addEventListener('input', () => {
   settings.bgColor = bgColorPicker.value;
   document.body.style.backgroundColor = settings.bgColor;
+  updateThemeColor(settings.bgColor);
   markCustom();
   saveSettings();
 });
@@ -841,12 +851,80 @@ window.addEventListener('resize', () => {
   }
 });
 
+// ===== PWA =====
+let deferredPrompt = null;
+
+// 动态生成 manifest 并内联
+function initManifest() {
+  const manifest = {
+    name: '屏幕保护时钟',
+    short_name: '时钟',
+    description: '全屏时钟 + 屏幕保护',
+    start_url: '/',
+    display: 'standalone',
+    orientation: 'any',
+    background_color: '#000000',
+    theme_color: '#000000',
+    categories: ['utilities', 'personalization'],
+    icons: [
+      { src: 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192"><rect width="192" height="192" rx="32" fill="#000"/><text x="96" y="130" text-anchor="middle" font-family="system-ui,sans-serif" font-size="120" fill="#fff">🕐</text></svg>'
+      ), sizes: '192x192', type: 'image/svg+xml', purpose: 'any maskable' },
+      { src: 'data:image/svg+xml,' + encodeURIComponent(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect width="512" height="512" rx="80" fill="#000"/><text x="256" y="340" text-anchor="middle" font-family="system-ui,sans-serif" font-size="300" fill="#fff">🕐</text></svg>'
+      ), sizes: '512x512', type: 'image/svg+xml', purpose: 'any maskable' },
+    ],
+  };
+
+  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  document.getElementById('manifest-link').href = url;
+}
+
+// 更新 theme-color
+function updateThemeColor(color) {
+  document.querySelector('meta[name="theme-color"]').content = color;
+}
+
+// 注册 Service Worker
+function registerSW() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js')
+      .then(reg => console.log('SW registered:', reg.scope))
+      .catch(err => console.log('SW registration failed:', err));
+  }
+}
+
+// 处理 PWA 安装提示
+function handleInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+  });
+}
+
+function triggerInstall() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(result => {
+      console.log('Install result:', result.outcome);
+      deferredPrompt = null;
+    });
+  } else {
+    alert('安装暂不可用。你可以通过浏览器菜单 > "添加到主屏幕" 来安装。');
+  }
+}
+
 // ===== 初始化 =====
+initManifest();
+registerSW();
+handleInstallPrompt();
 loadSettings();
 applySettings();
 syncControlsToSettings();
 updateClock();
 setInterval(updateClock, 1000);
+updateThemeColor(settings.bgColor);
 
 // 如果上次保存时屏幕保护开启，恢复
 if (settings.screensaverEnabled) {
