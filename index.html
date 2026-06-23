@@ -709,8 +709,9 @@ document.body.addEventListener('click', (e) => {
     return;
   }
 
-  // 点击空白区域 → 显示设置图标
+  // 点击空白区域 → 显示设置图标、触发全屏
   showSettingsIcon();
+  requestFullscreen();
 
   // 屏幕保护暂停
   if (settings.screensaverEnabled) {
@@ -861,7 +862,8 @@ function initManifest() {
     short_name: '时钟',
     description: '全屏时钟 + 屏幕保护',
     start_url: '/',
-    display: 'standalone',
+    display: 'fullscreen',
+    display_override: ['fullscreen', 'standalone'],
     orientation: 'any',
     background_color: '#000000',
     theme_color: '#000000',
@@ -892,6 +894,19 @@ function registerSW() {
     navigator.serviceWorker.register('/sw.js')
       .then(reg => console.log('SW registered:', reg.scope))
       .catch(err => console.log('SW registration failed:', err));
+  }
+}
+
+// 全屏沉浸
+let fullscreenRequested = false;
+function requestFullscreen() {
+  if (fullscreenRequested) return;
+  fullscreenRequested = true;
+  const el = document.documentElement;
+  if (el.requestFullscreen) {
+    el.requestFullscreen().catch(() => {});
+  } else if (el.webkitRequestFullscreen) {
+    el.webkitRequestFullscreen();
   }
 }
 
