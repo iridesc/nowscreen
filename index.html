@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>屏幕保护时钟</title>
 
 <!-- PWA Meta -->
@@ -53,6 +53,7 @@ body {
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.4s ease, visibility 0.4s ease, transform 0.3s ease;
+  -webkit-transition: opacity 0.4s ease, visibility 0.4s ease, -webkit-transform 0.3s ease;
   z-index: 100;
   width: 48px;
   height: 48px;
@@ -63,9 +64,11 @@ body {
   background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  background: rgba(40, 40, 40, 0.96);
 }
 #settings-icon:hover {
   background: rgba(255, 255, 255, 0.18);
+  -webkit-transform: rotate(60deg);
   transform: rotate(60deg);
 }
 #settings-icon.visible {
@@ -84,19 +87,25 @@ body {
   background: rgba(30, 30, 30, 0.95);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  background: rgba(30, 30, 30, 0.97);
   border-left: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: -4px 0 30px rgba(0, 0, 0, 0.5);
   z-index: 200;
   transform: translateX(100%);
+  -webkit-transform: translateX(100%);
   transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-transition: -webkit-transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 28px 24px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
   overflow-y: auto;
   color: #e0e0e0;
 }
+#settings-panel > * + * {
+  margin-top: 20px;
+}
 #settings-panel.open {
+  -webkit-transform: translateX(0);
   transform: translateX(0);
 }
 
@@ -120,6 +129,7 @@ body {
   line-height: 1;
   border-radius: 4px;
   transition: color 0.2s, background 0.2s;
+  -webkit-transition: color 0.2s, background 0.2s;
 }
 #settings-panel .close-btn:hover {
   color: #fff;
@@ -130,7 +140,9 @@ body {
 .setting-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+}
+.setting-group > * + * {
+  margin-top: 8px;
 }
 .setting-group label {
   font-size: 13px;
@@ -202,6 +214,7 @@ body {
   border-radius: 28px;
   cursor: pointer;
   transition: background 0.3s;
+  -webkit-transition: background 0.3s;
 }
 .toggle-switch .slider::before {
   content: '';
@@ -213,19 +226,21 @@ body {
   background: #fff;
   border-radius: 50%;
   transition: transform 0.3s;
+  -webkit-transition: -webkit-transform 0.3s;
 }
 .toggle-switch input:checked + .slider {
   background: #4caf50;
 }
 .toggle-switch input:checked + .slider::before {
+  -webkit-transform: translateX(20px);
   transform: translateX(20px);
 }
 
 /* 主题选择器 */
 .theme-selector {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  margin: -4px;
 }
 .theme-card {
   border: 2px solid rgba(255, 255, 255, 0.12);
@@ -234,13 +249,19 @@ body {
   cursor: pointer;
   text-align: center;
   transition: border-color 0.25s, background 0.25s, transform 0.2s;
+  -webkit-transition: border-color 0.25s, background 0.25s, -webkit-transform 0.2s;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  width: calc(20% - 8px);
+  margin: 4px;
+}
+.theme-card > * + * {
+  margin-top: 4px;
 }
 .theme-card:hover {
   border-color: rgba(255, 255, 255, 0.4);
+  -webkit-transform: translateY(-2px);
   transform: translateY(-2px);
 }
 .theme-card.active {
@@ -289,6 +310,9 @@ body {
   font-size: 12px;
   color: #666;
 }
+.panel-footer > * + * {
+  margin-left: 4px;
+}
 .panel-footer .version {
   color: #555;
 }
@@ -297,11 +321,13 @@ body {
   text-decoration: none;
   display: flex;
   align-items: center;
-  gap: 4px;
   transition: color 0.2s;
 }
 .panel-footer .github-link:hover {
   color: #bbb;
+}
+.panel-footer .github-link > * + * {
+  margin-left: 4px;
 }
 
 /* 范围值显示 */
@@ -449,25 +475,31 @@ body {
 </div>
 
 <script>
+// iOS 9.3 compatibility polyfills
+var rAF = window.requestAnimationFrame || window.webkitRequestAnimationFrame || function(fn) { return setTimeout(fn, 16); };
+var cAF = window.cancelAnimationFrame || window.webkitCancelAnimationFrame || function(id) { clearTimeout(id); };
+function padZero(n) { return (n < 10 ? '0' : '') + n; }
+function extend(target, source) { for (var key in source) { if (source.hasOwnProperty(key)) target[key] = source[key]; } return target; }
+
 // ===== DOM 引用 =====
-const clockEl = document.getElementById('clock');
-const settingsIcon = document.getElementById('settings-icon');
-const settingsPanel = document.getElementById('settings-panel');
-const panelClose = document.getElementById('panel-close');
+var clockEl = document.getElementById('clock');
+var settingsIcon = document.getElementById('settings-icon');
+var settingsPanel = document.getElementById('settings-panel');
+var panelClose = document.getElementById('panel-close');
 
 // 控件
-const fontSizeSlider = document.getElementById('font-size-slider');
-const fontSizeVal = document.getElementById('font-size-val');
-const bgColorPicker = document.getElementById('bg-color-picker');
-const textColorPicker = document.getElementById('text-color-picker');
-const fontSelect = document.getElementById('font-select');
-const timezoneSelect = document.getElementById('timezone-select');
-const hourFormatToggle = document.getElementById('hour-format-toggle');
-const screensaverToggle = document.getElementById('screensaver-toggle');
-const themeCards = document.querySelectorAll('.theme-card');
+var fontSizeSlider = document.getElementById('font-size-slider');
+var fontSizeVal = document.getElementById('font-size-val');
+var bgColorPicker = document.getElementById('bg-color-picker');
+var textColorPicker = document.getElementById('text-color-picker');
+var fontSelect = document.getElementById('font-select');
+var timezoneSelect = document.getElementById('timezone-select');
+var hourFormatToggle = document.getElementById('hour-format-toggle');
+var screensaverToggle = document.getElementById('screensaver-toggle');
+var themeCards = document.querySelectorAll('.theme-card');
 
 // ===== 主题定义 =====
-const THEMES = {
+var THEMES = {
   dark: {
     name: '暗夜模式',
     bgColor: '#000000',
@@ -553,7 +585,7 @@ const DEFAULT_SETTINGS = {
   screensaverSpeed: 0.8,
 };
 
-let settings = { ...DEFAULT_SETTINGS };
+let settings = extend({}, DEFAULT_SETTINGS);
 let settingsVisible = false;
 let hideIconTimer = null;
 let iconVisible = false;
@@ -577,10 +609,10 @@ function loadSettings() {
     const raw = localStorage.getItem('clock-settings');
     if (raw) {
       const parsed = JSON.parse(raw);
-      settings = { ...DEFAULT_SETTINGS, ...parsed };
+      settings = extend(extend({}, DEFAULT_SETTINGS), parsed);
     }
   } catch (e) {
-    settings = { ...DEFAULT_SETTINGS };
+    settings = extend({}, DEFAULT_SETTINGS);
   }
 }
 
@@ -607,15 +639,15 @@ function updateClock() {
   }
 
   let hours = now.getHours();
-  const minutes = String(now.getMinutes()).padStart(2, '0');
-  const seconds = String(now.getSeconds()).padStart(2, '0');
+  const minutes = padZero(now.getMinutes());
+  const seconds = padZero(now.getSeconds());
 
   if (settings.hourFormat === '12') {
     hours = hours % 12 || 12;
   }
 
-  hours = String(hours).padStart(2, '0');
-  clockEl.textContent = `${hours}:${minutes}:${seconds}`;
+  hours = padZero(hours);
+  clockEl.textContent = hours + ':' + minutes + ':' + seconds;
 }
 
 // ===== 同步控件状态 =====
@@ -632,7 +664,7 @@ function syncControlsToSettings() {
 }
 
 function syncThemeCards() {
-  themeCards.forEach(card => {
+  themeCards.forEach(function(card) {
     const themeKey = card.dataset.theme;
     if (themeKey === settings.theme) {
       card.classList.add('active');
@@ -659,7 +691,7 @@ function hideSettingsIcon() {
 
 function resetHideTimer() {
   clearTimeout(hideIconTimer);
-  hideIconTimer = setTimeout(() => {
+  hideIconTimer = setTimeout(function() {
     if (!settingsPanel.classList.contains('open')) {
       hideSettingsIcon();
     }
@@ -702,7 +734,7 @@ function startScreensaver() {
 
   function animate() {
     if (ssPaused) {
-      ssAnimationId = requestAnimationFrame(animate);
+      ssAnimationId = rAF(animate);
       return;
     }
 
@@ -734,15 +766,15 @@ function startScreensaver() {
     clockEl.style.left = ssPosX + 'px';
     clockEl.style.top = ssPosY + 'px';
 
-    ssAnimationId = requestAnimationFrame(animate);
+    ssAnimationId = rAF(animate);
   }
 
-  ssAnimationId = requestAnimationFrame(animate);
+  ssAnimationId = rAF(animate);
 }
 
 function stopScreensaver() {
   if (ssAnimationId) {
-    cancelAnimationFrame(ssAnimationId);
+    cAF(ssAnimationId);
     ssAnimationId = null;
   }
 
@@ -787,7 +819,7 @@ function pauseScreensaver() {
 function resumeScreensaver() {
   ssPaused = false;
   clearTimeout(ssResumeTimer);
-  ssResumeTimer = setTimeout(() => {
+  ssResumeTimer = setTimeout(function() {
     if (settings.screensaverEnabled && !settingsPanel.classList.contains('open')) {
       resumeScreensaverDirect();
     }
@@ -801,7 +833,7 @@ function resumeScreensaverDirect() {
 // ===== 事件处理 =====
 
 // 点击页面空白区域
-document.body.addEventListener('click', (e) => {
+document.body.addEventListener('click', function(e) {
   const target = e.target;
 
   // 点击设置图标 → 打开面板
@@ -833,31 +865,31 @@ document.body.addEventListener('click', (e) => {
 });
 
 // 面板关闭按钮
-panelClose.addEventListener('click', () => {
+panelClose.addEventListener('click', function() {
   closePanel();
 });
 
 // 防止面板上点击冒泡
-settingsPanel.addEventListener('click', (e) => {
+settingsPanel.addEventListener('click', function(e) {
   e.stopPropagation();
 });
 
 // 键盘 ESC 关闭面板
-document.addEventListener('keydown', (e) => {
+document.addEventListener('keydown', function(e) {
   if (e.key === 'Escape' && settingsPanel.classList.contains('open')) {
     closePanel();
   }
 });
 
 // 鼠标移动 → 重置隐藏计时器
-document.addEventListener('mousemove', () => {
+document.addEventListener('mousemove', function() {
   if (iconVisible) {
     resetHideTimer();
   }
 });
 
 // 触摸事件 → 重置隐藏计时器
-document.addEventListener('touchstart', () => {
+document.addEventListener('touchstart', function() {
   if (iconVisible) {
     resetHideTimer();
   }
@@ -888,8 +920,8 @@ function markCustom() {
 // ===== 控件绑定 =====
 
 // 主题卡片点击
-themeCards.forEach(card => {
-  card.addEventListener('click', (e) => {
+themeCards.forEach(function(card) {
+  card.addEventListener('click', function(e) {
     e.stopPropagation();
     const themeKey = card.dataset.theme;
     if (themeKey) applyTheme(themeKey);
@@ -897,7 +929,7 @@ themeCards.forEach(card => {
 });
 
 // 字体大小滑块
-fontSizeSlider.addEventListener('input', () => {
+fontSizeSlider.addEventListener('input', function() {
   settings.fontSize = parseInt(fontSizeSlider.value);
   fontSizeVal.textContent = settings.fontSize + 'vw';
   clockEl.style.fontSize = settings.fontSize + 'vw';
@@ -906,7 +938,7 @@ fontSizeSlider.addEventListener('input', () => {
 });
 
 // 背景颜色
-bgColorPicker.addEventListener('input', () => {
+bgColorPicker.addEventListener('input', function() {
   settings.bgColor = bgColorPicker.value;
   document.body.style.backgroundColor = settings.bgColor;
   updateThemeColor(settings.bgColor);
@@ -915,7 +947,7 @@ bgColorPicker.addEventListener('input', () => {
 });
 
 // 文字颜色
-textColorPicker.addEventListener('input', () => {
+textColorPicker.addEventListener('input', function() {
   settings.textColor = textColorPicker.value;
   clockEl.style.color = settings.textColor;
   markCustom();
@@ -923,7 +955,7 @@ textColorPicker.addEventListener('input', () => {
 });
 
 // 字体选择
-fontSelect.addEventListener('change', () => {
+fontSelect.addEventListener('change', function() {
   settings.fontFamily = fontSelect.value;
   clockEl.style.fontFamily = settings.fontFamily;
   markCustom();
@@ -931,26 +963,26 @@ fontSelect.addEventListener('change', () => {
 });
 
 // 时区选择
-timezoneSelect.addEventListener('change', () => {
+timezoneSelect.addEventListener('change', function() {
   settings.timezone = timezoneSelect.value;
   saveSettings();
   updateClock();
 });
 
 // 24小时制切换
-hourFormatToggle.addEventListener('change', () => {
+hourFormatToggle.addEventListener('change', function() {
   settings.hourFormat = hourFormatToggle.checked ? '24' : '12';
   saveSettings();
   updateClock();
 });
 
 // 屏幕保护开关
-screensaverToggle.addEventListener('change', () => {
+screensaverToggle.addEventListener('change', function() {
   toggleScreensaver(screensaverToggle.checked);
 });
 
 // 窗口大小变化时更新时钟占位
-window.addEventListener('resize', () => {
+window.addEventListener('resize', function() {
   if (settings.screensaverEnabled && !ssPaused) {
     // 确保时钟仍在视口内
     const cw = clockEl.offsetWidth;
@@ -1003,9 +1035,11 @@ function updateThemeColor(color) {
 // 注册 Service Worker
 function registerSW() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(reg => console.log('SW registered:', reg.scope))
-      .catch(err => console.log('SW registration failed:', err));
+    navigator.serviceWorker.register('/sw.js').then(function(reg) {
+      console.log('SW registered:', reg.scope);
+    }).catch(function(err) {
+      console.log('SW registration failed:', err);
+    });
   }
 }
 
@@ -1016,7 +1050,7 @@ function requestFullscreen() {
   fullscreenRequested = true;
   const el = document.documentElement;
   if (el.requestFullscreen) {
-    el.requestFullscreen().catch(() => {});
+    el.requestFullscreen()["catch"](function() {});
   } else if (el.webkitRequestFullscreen) {
     el.webkitRequestFullscreen();
   }
@@ -1024,7 +1058,7 @@ function requestFullscreen() {
 
 // 处理 PWA 安装提示
 function handleInstallPrompt() {
-  window.addEventListener('beforeinstallprompt', (e) => {
+  window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredPrompt = e;
   });
@@ -1033,7 +1067,7 @@ function handleInstallPrompt() {
 function triggerInstall() {
   if (deferredPrompt) {
     deferredPrompt.prompt();
-    deferredPrompt.userChoice.then(result => {
+    deferredPrompt.userChoice.then(function(result) {
       console.log('Install result:', result.outcome);
       deferredPrompt = null;
     });
